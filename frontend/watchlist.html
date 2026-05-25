@@ -106,6 +106,91 @@
 
     .wl-remove:hover { background: #3a1515; }
 
+    /* ── Alert button ── */
+    .wl-alert-btn {
+      background: transparent;
+      border: 1px solid #2a2d3a;
+      color: #888;
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .wl-alert-btn:hover { border-color: #f0c040; color: #f0c040; }
+    .wl-alert-btn.has-alert { border-color: #f0c040; color: #f0c040; }
+
+    /* ── Tab nav ── */
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .tab-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #2a2d3a;
+      background: transparent;
+      color: #888;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: #f0c040; color: #0f1117; border-color: #f0c040; }
+
+    /* ── Alert item ── */
+    .alert-item {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 0.9rem 1.25rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .alert-item.triggered { border-color: #f0c040; background: #1f1c10; }
+    .alert-info { flex: 1; min-width: 0; }
+    .alert-name { font-size: 0.9rem; font-weight: 600; color: #fff; }
+    .alert-bounds { font-size: 0.75rem; color: #555; margin-top: 0.15rem; }
+    .alert-triggered { font-size: 0.8rem; color: #f0c040; font-weight: 600; }
+    .alert-price { font-size: 0.8rem; color: #888; text-align: right; }
+    .alert-current { font-size: 0.85rem; color: #e0e0e0; font-weight: 600; }
+    .alert-delete { background: transparent; border: 1px solid #3a2020; color: #f87171; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.75rem; cursor: pointer; }
+    .alert-delete:hover { background: #3a1515; }
+
+    /* ── Alert modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; display: none;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1a1d27; border: 1px solid #2a2d3a;
+      border-radius: 12px; padding: 1.5rem; width: 320px; max-width: 90vw;
+    }
+    .modal h3 { font-size: 1rem; margin-bottom: 1rem; color: #fff; }
+    .modal .stock-label { font-size: 0.85rem; color: #888; margin-bottom: 0.75rem; }
+    .modal-field { margin-bottom: 0.9rem; }
+    .modal-field label { display: block; font-size: 0.75rem; color: #555; margin-bottom: 0.3rem; }
+    .modal-field input {
+      width: 100%; padding: 0.5rem 0.75rem;
+      background: #0f1117; border: 1px solid #2a2d3a;
+      border-radius: 6px; color: #e0e0e0; font-size: 0.9rem;
+    }
+    .modal-field input:focus { outline: none; border-color: #f0c040; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+    .modal-cancel {
+      padding: 0.4rem 1rem; border-radius: 6px;
+      border: 1px solid #2a2d3a; background: transparent; color: #888;
+      font-size: 0.85rem; cursor: pointer;
+    }
+    .modal-save {
+      padding: 0.4rem 1rem; border-radius: 6px;
+      background: #f0c040; border: none; color: #0f1117;
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    }
+    .modal-save:hover { opacity: 0.85; }
+
     /* ── States ── */
     .loading { text-align: center; padding: 2rem; color: #666; }
     .empty-state { text-align: center; padding: 3rem 1rem; color: #555; }
@@ -155,10 +240,46 @@
 
     <div id="errorBox" style="display:none" class="error-msg"></div>
 
-    <button class="refresh-btn" onclick="loadWatchlist()">&#8635; 重新整理</button>
+    <button class="refresh-btn" onclick="loadWatchlist(); loadAlerts();">↺ 重新整理</button>
 
-    <div id="wlContent">
-      <div class="loading">載入自選股...</div>
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" id="tabWL" onclick="switchTab('wl')">自選股</button>
+      <button class="tab-btn" id="tabAlert" onclick="switchTab('alert')">價格警示</button>
+    </div>
+
+    <!-- Watchlist panel -->
+    <div id="wlPanel">
+      <div id="wlContent">
+        <div class="loading">載入自選股...</div>
+      </div>
+    </div>
+
+    <!-- Alerts panel -->
+    <div id="alertPanel" style="display:none">
+      <div id="alertContent">
+        <div class="loading">載入警示...</div>
+      </div>
+    </div>
+
+    <!-- Alert modal -->
+    <div class="modal-overlay" id="alertModal">
+      <div class="modal">
+        <h3>設定價格警示</h3>
+        <div class="stock-label" id="modalStockLabel">2330 台積電</div>
+        <div class="modal-field">
+          <label>上限價格（可選）</label>
+          <input type="number" id="upperInput" placeholder="例：900" step="0.01" />
+        </div>
+        <div class="modal-field">
+          <label>下限價格（可選）</label>
+          <input type="number" id="lowerInput" placeholder="例：700" step="0.01" />
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel" onclick="closeAlertModal()">取消</button>
+          <button class="modal-save" onclick="saveAlert()">儲存</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -166,6 +287,9 @@
 
   <script>
     let userId = null;
+    let currentAlertSymbol = null;
+    let currentAlertName   = null;
+    let activeAlertSymbols = new Set();   // symbols that have alerts
 
     (() => {
       userId = localStorage.getItem("twsp_uid");
@@ -175,8 +299,31 @@
       }
       document.getElementById("uidDisplay").textContent = userId;
       loadWatchlist();
+      loadAlerts();
     })();
 
+    // ── Tab switching ──
+    function switchTab(tab) {
+      const wlPanel    = document.getElementById("wlPanel");
+      const alertPanel = document.getElementById("alertPanel");
+      const tabWL      = document.getElementById("tabWL");
+      const tabAlert   = document.getElementById("tabAlert");
+
+      if (tab === "wl") {
+        wlPanel.style.display    = "block";
+        alertPanel.style.display = "none";
+        tabWL.classList.add("active");
+        tabAlert.classList.remove("active");
+      } else {
+        wlPanel.style.display    = "none";
+        alertPanel.style.display = "block";
+        tabAlert.classList.add("active");
+        tabWL.classList.remove("active");
+        loadAlerts();
+      }
+    }
+
+    // ── Watchlist ──
     async function loadWatchlist() {
       const content = document.getElementById("wlContent");
       const errorBox = document.getElementById("errorBox");
@@ -189,9 +336,7 @@
         });
 
         if (res.status === 401) {
-          content.innerHTML = `
-            <div class="error-msg">請確認瀏覽器允許 localStorage，且未使用無痕模式。</div>
-          `;
+          content.innerHTML = `<div class="error-msg">請確認瀏覽器允許 localStorage</div>`;
           return;
         }
 
@@ -209,6 +354,9 @@
           return;
         }
 
+        // Check which symbols have alerts
+        await checkAlertSymbols(items.map(i => i.symbol));
+
         content.innerHTML = `<div class="section-title">已追蹤 ${items.length} 支股票</div>` + items.map(item => {
           const up   = item.change >= 0;
           const sign = up ? "+" : "";
@@ -221,6 +369,7 @@
             : "—";
           const board = item.board === "TWSE" ? "上市" : item.board === "TPEx" ? "上櫃" : "";
           const code  = item.symbol.replace(".TW","").replace(".TWO","");
+          const hasAlert = activeAlertSymbols.has(item.symbol) ? " has-alert" : "";
 
           return `
             <div class="wl-item" id="item-${item.symbol}">
@@ -232,6 +381,7 @@
                 <div class="price">${price}</div>
                 <div class="change ${cls}">${change}</div>
               </div>
+              <button class="wl-alert-btn${hasAlert}" onclick="openAlertModal('${item.symbol}', '${item.name || code}')">🔔</button>
               <button class="wl-remove" onclick="removeStock('${item.symbol}')">移除</button>
             </div>
           `;
@@ -240,6 +390,15 @@
       } catch (e) {
         content.innerHTML = `<div class="error-msg">載入失敗：${e.message}</div>`;
       }
+    }
+
+    async function checkAlertSymbols(symbols) {
+      try {
+        const res = await fetch("/api/alerts", { headers: { "X-User-Id": userId } });
+        if (!res.ok) return;
+        const data = await res.json();
+        activeAlertSymbols = new Set(data.alerts.map(a => a.symbol));
+      } catch (e) {}
     }
 
     async function removeStock(symbol) {
@@ -252,7 +411,6 @@
         if (res.ok) {
           const el = document.getElementById("item-" + symbol);
           if (el) el.remove();
-          // If no items left, show empty state
           const remaining = document.querySelectorAll(".wl-item");
           if (remaining.length === 0) loadWatchlist();
         } else {
@@ -261,6 +419,125 @@
         }
       } catch (e) {
         alert("移除失敗：" + e.message);
+      }
+    }
+
+    // ── Alerts ──
+    async function loadAlerts() {
+      const content = document.getElementById("alertContent");
+      content.innerHTML = '<div class="loading">載入警示...</div>';
+      try {
+        const res = await fetch("/api/alerts", { headers: { "X-User-Id": userId } });
+        if (res.status === 401) { content.innerHTML = '<div class="error-msg">請確認 X-User-Id</div>'; return; }
+        const data = await res.json();
+        const alerts = data.alerts || [];
+
+        if (!alerts.length) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">🔔</div>
+              <p>還沒有設定任何價格警示</p>
+              <p>在自選股頁面，點擊任一股的 <strong>🔔</strong> 按鈕即可設定</p>
+            </div>
+          `;
+          return;
+        }
+
+        content.innerHTML = alerts.map(a => {
+          const triggered = a.triggered;
+          const bounds = [
+            a.upper_bound != null ? "上限 $" + a.upper_bound.toFixed(2) : null,
+            a.lower_bound != null ? "下限 $" + a.lower_bound.toFixed(2) : null,
+          ].filter(Boolean).join(" &nbsp; ");
+
+          return `
+            <div class="alert-item${triggered ? " triggered" : ""}">
+              <div class="alert-info">
+                <div class="alert-name">${a.name || a.symbol}</div>
+                <div class="alert-bounds">${bounds}</div>
+                ${triggered ? `<div class="alert-triggered">${triggered}</div>` : ""}
+              </div>
+              <div class="alert-price">
+                ${a.current_price != null ? `<div class="alert-current">$${a.current_price.toFixed(2)}</div>` : ""}
+                <div style="font-size:0.72rem;color:#555">目前價格</div>
+              </div>
+              <button class="alert-delete" onclick="deleteAlert('${a.symbol}')">刪除</button>
+            </div>
+          `;
+        }).join("");
+
+      } catch (e) {
+        content.innerHTML = `<div class="error-msg">載入失敗：${e.message}</div>`;
+      }
+    }
+
+    function openAlertModal(symbol, name) {
+      currentAlertSymbol = symbol;
+      currentAlertName   = name;
+      const code = symbol.replace(".TW","").replace(".TWO","");
+      document.getElementById("modalStockLabel").textContent = code + " " + (name || "");
+      document.getElementById("upperInput").value = "";
+      document.getElementById("lowerInput").value = "";
+      document.getElementById("alertModal").classList.add("open");
+    }
+
+    function closeAlertModal() {
+      document.getElementById("alertModal").classList.remove("open");
+      currentAlertSymbol = null;
+      currentAlertName   = null;
+    }
+
+    async function saveAlert() {
+      if (!currentAlertSymbol) return;
+      const upper = document.getElementById("upperInput").value;
+      const lower = document.getElementById("lowerInput").value;
+      const upperVal = upper ? parseFloat(upper) : null;
+      const lowerVal = lower ? parseFloat(lower) : null;
+
+      try {
+        const res = await fetch("/api/alerts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userId,
+          },
+          body: JSON.stringify({
+            symbol: currentAlertSymbol,
+            upper_bound: upperVal,
+            lower_bound: lowerVal,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert("設定失敗：" + (err.detail || res.statusText));
+          return;
+        }
+
+        closeAlertModal();
+        loadWatchlist();   // refresh bell icons
+        loadAlerts();      // refresh alerts list
+      } catch (e) {
+        alert("設定失敗：" + e.message);
+      }
+    }
+
+    async function deleteAlert(symbol) {
+      if (!confirm("刪除此警示？")) return;
+      try {
+        const res = await fetch(`/api/alerts/${symbol}`, {
+          method: "DELETE",
+          headers: { "X-User-Id": userId },
+        });
+        if (res.ok) {
+          loadWatchlist();
+          loadAlerts();
+        } else {
+          const err = await res.json();
+          alert("刪除失敗：" + (err.detail || res.statusText));
+        }
+      } catch (e) {
+        alert("刪除失敗：" + e.message);
       }
     }
   </script>
