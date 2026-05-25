@@ -5,14 +5,137 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>自選股 — TW Stock Portal</title>
   <style>
-    body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
-    header { background: #1a1d27; padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid #2a2d3a; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1d27;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
     header a { color: #f0c040; text-decoration: none; font-size: 1.25rem; }
     header h1 { font-size: 1rem; color: #888; }
-    .main { padding: 1.5rem; max-width: 800px; margin: 0 auto; }
+
+    .main { padding: 1rem 1rem 3rem; max-width: 800px; margin: 0 auto; }
     .back-link { display: inline-block; color: #f0c040; text-decoration: none; font-size: 0.85rem; margin-bottom: 1rem; }
-    .placeholder { text-align: center; padding: 3rem; color: #666; }
-    .placeholder p { margin-top: 1rem; font-size: 0.9rem; }
+
+    .uid-bar {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      color: #555;
+    }
+    .uid-bar span { color: #f0c040; font-family: monospace; }
+
+    .section-title {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Watchlist item ── */
+    .wl-item {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .wl-item:hover { border-color: #3a3d4a; }
+
+    .wl-info { flex: 1; min-width: 0; }
+
+    .wl-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wl-code {
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: 0.1rem;
+    }
+
+    .wl-price {
+      text-align: right;
+    }
+
+    .wl-price .price {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .wl-price .change { font-size: 0.8rem; font-weight: 600; }
+    .up   { color: #ef4444; }
+    .down { color: #22c55e; }
+
+    .wl-remove {
+      background: transparent;
+      border: 1px solid #3a2020;
+      color: #f87171;
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .wl-remove:hover { background: #3a1515; }
+
+    /* ── States ── */
+    .loading { text-align: center; padding: 2rem; color: #666; }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #555; }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.9rem; margin-bottom: 0.4rem; }
+    .empty-state a { color: #f0c040; text-decoration: none; }
+
+    .error-msg {
+      background: #2a1515;
+      border: 1px solid #5a2020;
+      border-radius: 8px;
+      padding: 1rem;
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid #2a2d3a;
+      color: #888;
+      border-radius: 6px;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+    .refresh-btn:hover { border-color: #f0c040; color: #f0c040; }
+
+    footer { text-align: center; padding: 1rem; color: #444; font-size: 0.7rem; }
   </style>
 </head>
 <body>
@@ -20,12 +143,126 @@
     <a href="/">&#8592;</a>
     <h1>自選股</h1>
   </header>
+
   <div class="main">
     <a href="/" class="back-link">&#8592; 回首頁</a>
-    <div class="placeholder">
-      <div style="font-size:3rem">⭐</div>
-      <p>登入功能施工中，敬請期待。</p>
+
+    <div class="uid-bar">
+      用戶 ID：<span id="uidDisplay">載入中...</span>
+      &nbsp;|&nbsp;
+      <span style="color:#555">（用於 MVP 階段識別，無需密碼）</span>
+    </div>
+
+    <div id="errorBox" style="display:none" class="error-msg"></div>
+
+    <button class="refresh-btn" onclick="loadWatchlist()">&#8635; 重新整理</button>
+
+    <div id="wlContent">
+      <div class="loading">載入自選股...</div>
     </div>
   </div>
+
+  <footer>本系統僅供參考，不構成投資建議</footer>
+
+  <script>
+    let userId = null;
+
+    (() => {
+      userId = localStorage.getItem("twsp_uid");
+      if (!userId) {
+        userId = "user_" + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("twsp_uid", userId);
+      }
+      document.getElementById("uidDisplay").textContent = userId;
+      loadWatchlist();
+    })();
+
+    async function loadWatchlist() {
+      const content = document.getElementById("wlContent");
+      const errorBox = document.getElementById("errorBox");
+      errorBox.style.display = "none";
+      content.innerHTML = '<div class="loading">載入中...</div>';
+
+      try {
+        const res = await fetch("/api/watchlist", {
+          headers: { "X-User-Id": userId },
+        });
+
+        if (res.status === 401) {
+          content.innerHTML = `
+            <div class="error-msg">請確認瀏覽器允許 localStorage，且未使用無痕模式。</div>
+          `;
+          return;
+        }
+
+        const data = await res.json();
+        const items = data.items || [];
+
+        if (!items.length) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">⭐</div>
+              <p>還沒有加入任何自選股</p>
+              <p><a href="/">前往首頁</a>，輸入股票代碼後點「加入自選」</p>
+            </div>
+          `;
+          return;
+        }
+
+        content.innerHTML = `<div class="section-title">已追蹤 ${items.length} 支股票</div>` + items.map(item => {
+          const up   = item.change >= 0;
+          const sign = up ? "+" : "";
+          const cls  = up ? "up" : "down";
+          const price = item.price != null
+            ? "$" + item.price.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})
+            : "—";
+          const change = item.change != null
+            ? `${sign}${item.change}（${sign}${item.change_pct}%）`
+            : "—";
+          const board = item.board === "TWSE" ? "上市" : item.board === "TPEx" ? "上櫃" : "";
+          const code  = item.symbol.replace(".TW","").replace(".TWO","");
+
+          return `
+            <div class="wl-item" id="item-${item.symbol}">
+              <div class="wl-info">
+                <div class="wl-name">${item.name || item.nickname || code}</div>
+                <div class="wl-code">${code} ${board ? "· " + board : ""}</div>
+              </div>
+              <div class="wl-price">
+                <div class="price">${price}</div>
+                <div class="change ${cls}">${change}</div>
+              </div>
+              <button class="wl-remove" onclick="removeStock('${item.symbol}')">移除</button>
+            </div>
+          `;
+        }).join("");
+
+      } catch (e) {
+        content.innerHTML = `<div class="error-msg">載入失敗：${e.message}</div>`;
+      }
+    }
+
+    async function removeStock(symbol) {
+      if (!confirm("移除「" + symbol + "」出，自選股？")) return;
+      try {
+        const res = await fetch(`/api/watchlist/${symbol}`, {
+          method: "DELETE",
+          headers: { "X-User-Id": userId },
+        });
+        if (res.ok) {
+          const el = document.getElementById("item-" + symbol);
+          if (el) el.remove();
+          // If no items left, show empty state
+          const remaining = document.querySelectorAll(".wl-item");
+          if (remaining.length === 0) loadWatchlist();
+        } else {
+          const err = await res.json();
+          alert("移除失敗：" + (err.detail || res.statusText));
+        }
+      } catch (e) {
+        alert("移除失敗：" + e.message);
+      }
+    }
+  </script>
 </body>
 </html>

@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 
-from app.routers import stocks
+from app.routers import stocks, watchlist
 
 
 app = FastAPI(
@@ -27,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(stocks.router)
+app.include_router(watchlist.router)
 
 # Serve static frontend files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

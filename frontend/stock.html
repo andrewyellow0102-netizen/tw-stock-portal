@@ -180,6 +180,18 @@
 
     footer { text-align: center; padding: 1rem; color: #444; font-size: 0.7rem; }
 
+    .wl-btn {
+      padding: 0.3rem 0.8rem;
+      background: transparent;
+      border: 1px solid #f0c040;
+      color: #f0c040;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .wl-btn:hover { background: #f0c040; color: #0f1117; }
+    .wl-btn.added { background: #f0c040; color: #0f1117; border-color: #f0c040; }
+
     /* OHLC tooltip */
     .ohlc-tooltip {
       position: absolute;
@@ -197,10 +209,13 @@
   </style>
 </head>
 <body>
-  <header>
-    <a href="/">&#8592;</a>
-    <h1 id="pageTitle">個股報價</h1>
-  </header>
+<header>
+      <a href="/">&#8592;</a>
+      <h1 id="pageTitle">個股報價</h1>
+      <button id="addWatchlistBtn" class="wl-btn" onclick="addToWatchlist()" style="margin-left:auto;display:none">
+        &#9733; 加入自選
+      </button>
+    </header>
 
   <div class="main">
     <a href="/" class="back-link">&#8592; 回首頁</a>
@@ -277,7 +292,14 @@
     let chartMain  = null;
     let chartKD    = null;
     let chartRSI   = null;
+    let currentSymbol = null;   // resolved symbol after API call
     const SYMBOL   = window.location.pathname.split("/stock/")[1];
+
+    function getUserId() {
+      let uid = localStorage.getItem("twsp_uid");
+      if (!uid) { uid = "user_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("twsp_uid", uid); }
+      return uid;
+    }
 
     // ── Init ──
     (async () => {
@@ -304,6 +326,10 @@
     }
 
     function renderQuote(el, q) {
+      currentSymbol = q.symbol;   // store resolved symbol
+      const btn = document.getElementById("addWatchlistBtn");
+      btn.style.display = "inline-block";
+
       const up   = q.change >= 0;
       const sign = up ? "+" : "";
       const cls  = up ? "up" : "down";
@@ -546,6 +572,32 @@
       if (chartData) {
         if (showRSI && !chartRSI) renderRSIChart();
         else if (!showRSI && chartRSI) { chartRSI.destroy(); chartRSI = null; }
+      }
+    }
+
+    // ── Watchlist ──
+    async function addToWatchlist() {
+      if (!currentSymbol) return;
+      const btn = document.getElementById("addWatchlistBtn");
+      try {
+        const res = await fetch("/api/watchlist", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": getUserId(),
+          },
+          body: JSON.stringify({ symbol: currentSymbol }),
+        });
+        if (res.ok) {
+          btn.textContent = "✓ 已加入";
+          btn.classList.add("added");
+          btn.disabled = true;
+        } else {
+          const err = await res.json();
+          alert("加入失敗：" + (err.detail || res.statusText));
+        }
+      } catch (e) {
+        alert("加入失敗：" + e.message);
       }
     }
 
