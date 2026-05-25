@@ -21,27 +21,22 @@
       align-items: center;
       gap: 1rem;
       border-bottom: 1px solid #2a2d3a;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    header a {
-      color: #f0c040;
-      text-decoration: none;
-      font-size: 1.25rem;
-    }
+    header a { color: #f0c040; text-decoration: none; font-size: 1.25rem; }
+    header h1 { font-size: 1rem; color: #888; }
 
-    header h1 {
-      font-size: 1rem;
-      color: #888;
-    }
-
-    .main { padding: 1.5rem; max-width: 800px; margin: 0 auto; }
+    .main { padding: 1rem 1rem 3rem; max-width: 900px; margin: 0 auto; }
 
     .back-link {
       display: inline-block;
       color: #f0c040;
       text-decoration: none;
       font-size: 0.85rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
     /* ── Quote Card ── */
@@ -49,23 +44,23 @@
       background: #1a1d27;
       border: 1px solid #2a2d3a;
       border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .quote-header {
       display: flex;
       align-items: baseline;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
       flex-wrap: wrap;
     }
 
-    .quote-name { font-size: 1.5rem; font-weight: 700; color: #fff; }
-    .quote-code { font-size: 0.9rem; color: #888; }
+    .quote-name { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .quote-code { font-size: 0.85rem; color: #888; }
     .quote-board {
-      font-size: 0.75rem;
-      padding: 0.15rem 0.5rem;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.45rem;
       border-radius: 4px;
       background: #2a2d3a;
       color: #aaa;
@@ -74,60 +69,55 @@
     .quote-price-row {
       display: flex;
       align-items: baseline;
-      gap: 0.75rem;
+      gap: 0.6rem;
       margin-bottom: 0.75rem;
     }
 
-    .quote-price { font-size: 2.5rem; font-weight: 700; color: #fff; }
-    .quote-change { font-size: 1.1rem; font-weight: 600; }
+    .quote-price { font-size: 2.2rem; font-weight: 700; color: #fff; }
+    .quote-change { font-size: 1rem; font-weight: 600; }
     .up   { color: #ef4444; }
     .down { color: #22c55e; }
 
     .quote-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 0.75rem 1.5rem;
-      margin-top: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.6rem 1.2rem;
     }
 
-    .quote-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
+    .quote-item { display: flex; flex-direction: column; gap: 0.1rem; }
+    .quote-label { font-size: 0.7rem; color: #555; }
+    .quote-value { font-size: 0.9rem; color: #d0d0d0; }
 
-    .quote-label { font-size: 0.75rem; color: #666; }
-    .quote-value { font-size: 1rem; color: #e0e0e0; }
-
-    /* ── Chart placeholder ── */
+    /* ── Chart Cards ── */
     .chart-card {
       background: #1a1d27;
       border: 1px solid #2a2d3a;
       border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
     }
 
     .chart-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      margin-bottom: 0.6rem;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
-    .chart-title { font-size: 1rem; font-weight: 600; }
+    .chart-title { font-size: 0.85rem; font-weight: 600; color: #ccc; }
+    .chart-subtitle { font-size: 0.7rem; color: #555; margin-left: 0.5rem; }
 
-    .range-buttons { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .range-buttons { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 
     .range-btn {
-      padding: 0.3rem 0.7rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 6px;
       border: 1px solid #2a2d3a;
       background: transparent;
       color: #888;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       cursor: pointer;
     }
 
@@ -137,22 +127,14 @@
       border-color: #f0c040;
     }
 
-    #chartCanvas { width: 100%; max-height: 320px; }
-
-    /* ── Indicator toggles ── */
-    .indicator-row {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
+    .indicator-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
 
     .ind-btn {
-      padding: 0.3rem 0.8rem;
+      padding: 0.2rem 0.6rem;
       border-radius: 20px;
       border: 1px solid;
       background: transparent;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       cursor: pointer;
     }
 
@@ -163,8 +145,31 @@
     .ind-btn.active.ma20 { background: #ef4444; color: #fff; }
     .ind-btn.active.ma60 { background: #a855f7; color: #fff; }
 
-    /* ── Loading / Error states ── */
-    .loading { text-align: center; padding: 2rem; color: #666; }
+    .sub-indicators {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub-ind-btn {
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      border: 1px solid #2a2d3a;
+      background: transparent;
+      font-size: 0.75rem;
+      color: #888;
+      cursor: pointer;
+    }
+
+    .sub-ind-btn.kd.active   { border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.1); }
+    .sub-ind-btn.rsi.active   { border-color: #06b6d4; color: #06b6d4; background: rgba(6,182,212,0.1); }
+
+    canvas { display: block; width: 100% !important; }
+
+    .chart-wrapper { margin-bottom: 0.5rem; }
+
+    /* ── States ── */
+    .loading { text-align: center; padding: 1.5rem; color: #666; }
     .error-msg {
       background: #2a1515;
       border: 1px solid #5a2020;
@@ -173,12 +178,21 @@
       color: #f87171;
     }
 
-    /* ── Footer ── */
-    footer {
-      text-align: center;
-      padding: 1rem;
-      color: #444;
-      font-size: 0.75rem;
+    footer { text-align: center; padding: 1rem; color: #444; font-size: 0.7rem; }
+
+    /* OHLC tooltip */
+    .ohlc-tooltip {
+      position: absolute;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 6px;
+      padding: 0.4rem 0.7rem;
+      font-size: 0.72rem;
+      color: #ccc;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -191,31 +205,62 @@
   <div class="main">
     <a href="/" class="back-link">&#8592; 回首頁</a>
 
-    <!-- Quote section -->
     <div class="quote-card" id="quoteCard">
-      <div class="loading" id="quoteLoading">載入報價中...</div>
+      <div class="loading">載入報價中...</div>
     </div>
 
-    <!-- Chart section -->
-    <div class="chart-card" id="chartCard" style="display:none">
+    <!-- Main price + MA chart -->
+    <div class="chart-card" id="mainChartCard" style="display:none">
       <div class="chart-header">
-        <span class="chart-title">走勢圖</span>
+        <span>
+          <span class="chart-title">走勢圖</span>
+          <span class="chart-subtitle" id="chartRangeLabel">3個月</span>
+        </span>
         <div class="range-buttons">
           <button class="range-btn" data-range="5d">5日</button>
-          <button class="range-btn active" data-range="1mo">1月</button>
-          <button class="range-btn" data-range="3mo">3月</button>
+          <button class="range-btn" data-range="1mo">1月</button>
+          <button class="range-btn active" data-range="3mo">3月</button>
           <button class="range-btn" data-range="6mo">6月</button>
           <button class="range-btn" data-range="1y">1年</button>
         </div>
       </div>
 
       <div class="indicator-row">
-        <button class="ind-btn ma5 " id="btnMA5"  onclick="toggleMA(5)">MA5</button>
+        <button class="ind-btn ma5 "  id="btnMA5"  onclick="toggleMA(5)">MA5</button>
         <button class="ind-btn ma20 active" id="btnMA20" onclick="toggleMA(20)">MA20</button>
         <button class="ind-btn ma60" id="btnMA60" onclick="toggleMA(60)">MA60</button>
       </div>
 
-      <canvas id="chartCanvas"></canvas>
+      <div class="sub-indicators">
+        <button class="sub-ind-btn kd"  id="btnKD"  onclick="toggleKD()">KD</button>
+        <button class="sub-ind-btn rsi"  id="btnRSI" onclick="toggleRSI()">RSI</button>
+      </div>
+
+      <div class="chart-wrapper">
+        <canvas id="chartMain"></canvas>
+      </div>
+    </div>
+
+    <!-- KD subchart -->
+    <div class="chart-card" id="kdCard" style="display:none">
+      <div class="chart-header">
+        <span class="chart-title">KD 指標</span>
+        <span class="chart-subtitle">K(橙) / D(灰)</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="chartKD"></canvas>
+      </div>
+    </div>
+
+    <!-- RSI subchart -->
+    <div class="chart-card" id="rsiCard" style="display:none">
+      <div class="chart-header">
+        <span class="chart-title">RSI 指標</span>
+        <span class="chart-subtitle">RSI6(青) / RSI12(灰)</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="chartRSI"></canvas>
+      </div>
     </div>
   </div>
 
@@ -225,10 +270,14 @@
   <script>
     // ── State ──
     let chartData = null;
-    let activeRange = "1mo";
-    let visibleMA = new Set([20]);
-    let priceChart = null;
-    const SYMBOL = window.location.pathname.split("/stock/")[1];
+    let activeRange = "3mo";
+    let visibleMA  = new Set([20]);
+    let showKD     = false;
+    let showRSI    = false;
+    let chartMain  = null;
+    let chartKD    = null;
+    let chartRSI   = null;
+    const SYMBOL   = window.location.pathname.split("/stock/")[1];
 
     // ── Init ──
     (async () => {
@@ -255,11 +304,11 @@
     }
 
     function renderQuote(el, q) {
-      const up = q.change >= 0;
+      const up   = q.change >= 0;
       const sign = up ? "+" : "";
-      const cls = up ? "up" : "down";
-      const pe = q.pe_ratio !== null ? q.pe_ratio.toFixed(1) + "x" : "—";
-      const pb = q.pb_ratio !== null ? q.pb_ratio.toFixed(2) : "—";
+      const cls  = up ? "up" : "down";
+      const pe   = q.pe_ratio !== null ? q.pe_ratio.toFixed(1) + "x" : "—";
+      const pb   = q.pb_ratio !== null ? q.pb_ratio.toFixed(2) : "—";
 
       el.innerHTML = `
         <div class="quote-header">
@@ -272,71 +321,66 @@
           <span class="quote-change ${cls}">${sign}${q.change}（${sign}${q.change_pct}%）</span>
         </div>
         <div class="quote-grid">
-          <div class="quote-item">
-            <span class="quote-label">開盤</span>
-            <span class="quote-value">$${q.open.toLocaleString()}</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">最高</span>
-            <span class="quote-value">$${q.high.toLocaleString()}</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">最低</span>
-            <span class="quote-value">$${q.low.toLocaleString()}</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">昨收</span>
-            <span class="quote-value">$${q.prev_close.toLocaleString()}</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">成交量</span>
-            <span class="quote-value">${(q.volume / 1000).toFixed(0)} 張</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">本益比</span>
-            <span class="quote-value">${pe}</span>
-          </div>
-          <div class="quote-item">
-            <span class="quote-label">股價淨值比</span>
-            <span class="quote-value">${pb}</span>
-          </div>
+          <div class="quote-item"><span class="quote-label">開盤</span><span class="quote-value">$${q.open.toLocaleString()}</span></div>
+          <div class="quote-item"><span class="quote-label">最高</span><span class="quote-value">$${q.high.toLocaleString()}</span></div>
+          <div class="quote-item"><span class="quote-label">最低</span><span class="quote-value">$${q.low.toLocaleString()}</span></div>
+          <div class="quote-item"><span class="quote-label">昨收</span><span class="quote-value">$${q.prev_close.toLocaleString()}</span></div>
+          <div class="quote-item"><span class="quote-label">成交量</span><span class="quote-value">${(q.volume / 1000).toFixed(0)} 張</span></div>
+          <div class="quote-item"><span class="quote-label">本益比</span><span class="quote-value">${pe}</span></div>
+          <div class="quote-item"><span class="quote-label">股價淨值比</span><span class="quote-value">${pb}</span></div>
         </div>
       `;
     }
 
-    // ── Chart ──
+    // ── Chart data ──
     async function loadChart(range) {
       activeRange = range;
       document.querySelectorAll(".range-btn").forEach(b =>
         b.classList.toggle("active", b.dataset.range === range)
       );
-      document.getElementById("chartCard").style.display = "block";
+
+      const rangeLabel = { "5d": "5天", "1mo": "1個月", "3mo": "3個月", "6mo": "6個月", "1y": "1年" };
+      document.getElementById("chartRangeLabel").textContent = rangeLabel[range] || range;
+
+      document.getElementById("mainChartCard").style.display = "block";
 
       try {
         const res = await fetch(`/api/chart/${SYMBOL}?range_=${range}`);
-        if (!res.ok) { return; }
+        if (!res.ok) return;
         chartData = await res.json();
-        renderChart();
+        renderAllCharts();
       } catch (e) {
         console.error("Chart load failed", e);
       }
     }
 
-    function renderChart() {
+    function makeLabels(candles) {
+      return candles.map(c =>
+        new Date(c.date * 1000).toLocaleDateString("zh-TW", {month: "numeric", day: "numeric"})
+      );
+    }
+
+    function renderAllCharts() {
+      renderMainChart();
+      if (showKD)  renderKDChart();
+      if (showRSI) renderRSIChart();
+    }
+
+    // ── Main price + MA chart ──
+    function renderMainChart() {
       const { candles, ma5, ma20, ma60 } = chartData;
       const closes = candles.map(c => c.close);
-      const labels = candles.map(c => new Date(c.date * 1000).toLocaleDateString("zh-TW", {month:"numeric",day:"numeric"}));
+      const labels = makeLabels(candles);
 
-      const ctx = document.getElementById("chartCanvas").getContext("2d");
-
-      if (priceChart) priceChart.destroy();
+      const ctx = document.getElementById("chartMain").getContext("2d");
+      if (chartMain) chartMain.destroy();
 
       const datasets = [
         {
           label: "收盤價",
           data: closes,
           borderColor: "#f0c040",
-          backgroundColor: "rgba(240,192,64,0.1)",
+          backgroundColor: "rgba(240,192,64,0.08)",
           borderWidth: 1.5,
           pointRadius: 0,
           tension: 0.2,
@@ -345,34 +389,164 @@
         },
       ];
 
-      if (visibleMA.has(5))  datasets.push(lineDS("MA5",  ma5,  "#3b82f6"));
-      if (visibleMA.has(20)) datasets.push(lineDS("MA20", ma20, "#ef4444"));
-      if (visibleMA.has(60)) datasets.push(lineDS("MA60", ma60, "#a855f7"));
+      if (visibleMA.has(5))  datasets.push(lineDS("MA5",  ma5,  "#3b82f6", 1));
+      if (visibleMA.has(20)) datasets.push(lineDS("MA20", ma20, "#ef4444", 1));
+      if (visibleMA.has(60)) datasets.push(lineDS("MA60", ma60, "#a855f7", 1));
 
-      priceChart = new Chart(ctx, {
+      chartMain = new Chart(ctx, {
         type: "line",
         data: { labels, datasets },
         options: {
           responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2.8,
           interaction: { intersect: false, mode: "index" },
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280", maxTicksLimit: 8 } },
-            y: { position: "right", grid: { color: "#1f2937" }, ticks: { color: "#6b7280" } },
+            x: {
+              grid: { color: "#1f2937" },
+              ticks: { color: "#6b7280", maxTicksLimit: 10, maxRotation: 0 },
+            },
+            y: {
+              position: "right",
+              grid: { color: "#1f2937" },
+              ticks: { color: "#6b7280" },
+            },
           },
         },
       });
     }
 
-    function lineDS(label, values, color) {
-      return { label, data: values, borderColor: color, borderWidth: 1, pointRadius: 0, tension: 0.2, fill: false };
+    // ── KD subchart ──
+    function renderKDChart() {
+      const { candles, kd_k, kd_d } = chartData;
+      const labels = makeLabels(candles);
+      const ctx    = document.getElementById("chartKD").getContext("2d");
+      if (chartKD) chartKD.destroy();
+
+      chartKD = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "K",
+              data: kd_k,
+              borderColor: "#f97316",
+              borderWidth: 1.2,
+              pointRadius: 0,
+              tension: 0.3,
+            },
+            {
+              label: "D",
+              data: kd_d,
+              borderColor: "#6b7280",
+              borderWidth: 1.2,
+              pointRadius: 0,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 3.5,
+          interaction: { intersect: false, mode: "index" },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280", maxTicksLimit: 10, maxRotation: 0 } },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: "#1f2937" },
+              ticks: { color: "#6b7280", stepSize: 25 },
+            },
+          },
+        },
+      });
     }
 
+    // ── RSI subchart ──
+    function renderRSIChart() {
+      const { candles, rsi_6, rsi_12 } = chartData;
+      const labels = makeLabels(candles);
+      const ctx    = document.getElementById("chartRSI").getContext("2d");
+      if (chartRSI) chartRSI.destroy();
+
+      chartRSI = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "RSI6",
+              data: rsi_6,
+              borderColor: "#06b6d4",
+              borderWidth: 1.2,
+              pointRadius: 0,
+              tension: 0.3,
+            },
+            {
+              label: "RSI12",
+              data: rsi_12,
+              borderColor: "#6b7280",
+              borderWidth: 1.2,
+              pointRadius: 0,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 3.5,
+          interaction: { intersect: false, mode: "index" },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280", maxTicksLimit: 10, maxRotation: 0 } },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: "#1f2937" },
+              ticks: { color: "#6b7280", stepSize: 25 },
+            },
+          },
+        },
+      });
+    }
+
+    function lineDS(label, values, color, width) {
+      return { label, data: values, borderColor: color, borderWidth: width, pointRadius: 0, tension: 0.2, fill: false };
+    }
+
+    // ── Toggles ──
     function toggleMA(n) {
       if (visibleMA.has(n)) visibleMA.delete(n);
       else visibleMA.add(n);
       document.getElementById(`btnMA${n}`).classList.toggle("active", visibleMA.has(n));
-      if (chartData) renderChart();
+      if (chartData) renderMainChart();
+    }
+
+    function toggleKD() {
+      showKD = !showKD;
+      document.getElementById("btnKD").classList.toggle("active", showKD);
+      document.getElementById("kdCard").style.display = showKD ? "block" : "none";
+      if (showKD && !chartKD) renderKDChart();
+      if (chartData) {
+        if (showKD && !chartKD) renderKDChart();
+        else if (!showKD && chartKD) { chartKD.destroy(); chartKD = null; }
+      }
+    }
+
+    function toggleRSI() {
+      showRSI = !showRSI;
+      document.getElementById("btnRSI").classList.toggle("active", showRSI);
+      document.getElementById("rsiCard").style.display = showRSI ? "block" : "none";
+      if (showRSI && !chartRSI) renderRSIChart();
+      if (chartData) {
+        if (showRSI && !chartRSI) renderRSIChart();
+        else if (!showRSI && chartRSI) { chartRSI.destroy(); chartRSI = null; }
+      }
     }
 
     // Range buttons
