@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台股分析站台</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a1d27;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    header h1 { font-size: 1.25rem; color: #f0c040; font-weight: 700; }
+
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      gap: 2rem;
+    }
+
+    .hero h2 {
+      font-size: 2rem;
+      color: #f0c040;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .hero p { color: #888; text-align: center; margin-bottom: 2rem; }
+
+    .search-box {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #2a2d3a;
+      background: #1a1d27;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .search-box input:focus { border-color: #f0c040; }
+
+    .search-box button {
+      padding: 0.75rem 1.5rem;
+      background: #f0c040;
+      color: #0f1117;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .search-box button:hover { background: #e0b030; }
+
+    #suggestions {
+      width: 100%;
+      max-width: 480px;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    #suggestions .item {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    #suggestions .item:last-child { border-bottom: none; }
+    #suggestions .item:hover { background: #2a2d3a; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      max-width: 640px;
+      width: 100%;
+    }
+
+    .feature-card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .feature-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .feature-card h3 { font-size: 0.9rem; color: #e0e0e0; margin-bottom: 0.25rem; }
+    .feature-card p { font-size: 0.75rem; color: #666; }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      color: #444;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📈 TW Stock Portal</h1>
+  </header>
+
+  <div class="container">
+    <div class="hero">
+      <h2>台股分析站台</h2>
+      <p>查詢上市/上櫃個股報價、技術分析、財務資料</p>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="輸入股票代碼或名稱，例如：2330"
+        autocomplete="off"
+      />
+      <button onclick="goStock()">查詢</button>
+    </div>
+
+    <div id="suggestions"></div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>即時報價</h3>
+        <p>上市/上櫃即時報價</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📉</div>
+        <h3>技術指標</h3>
+        <p>MA / KD / RSI</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">💰</div>
+        <h3>基本面</h3>
+        <p>EPS / 營收</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">⭐</div>
+        <h3>自選股</h3>
+        <p>追蹤感興趣的股票</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>本系統僅供參考，不構成投資建議</footer>
+
+  <script>
+    const input = document.getElementById("searchInput");
+    const suggestions = document.getElementById("suggestions");
+    let debounceTimer;
+
+    input.addEventListener("input", () => {
+      clearTimeout(debounceTimer);
+      const q = input.value.trim();
+      if (!q) { suggestions.style.display = "none"; return; }
+      debounceTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (!data.results.length) {
+            suggestions.innerHTML = '<div class="item" style="color:#888">無相符結果</div>';
+          } else {
+            suggestions.innerHTML = data.results.map(r =>
+              `<div class="item" onclick="selectCode('${r.code}')">${r.name}</div>`
+            ).join("");
+          }
+          suggestions.style.display = "block";
+        } catch (e) {
+          suggestions.style.display = "none";
+        }
+      }, 200);
+    });
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") goStock();
+    });
+
+    function selectCode(code) {
+      input.value = code;
+      suggestions.style.display = "none";
+      goStock();
+    }
+
+    function goStock() {
+      const code = input.value.trim().toUpperCase();
+      if (!code) return;
+      window.location.href = `/stock/${code}`;
+    }
+
+    // Click outside to close suggestions
+    document.addEventListener("click", e => {
+      if (!e.target.closest(".search-box")) {
+        suggestions.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
