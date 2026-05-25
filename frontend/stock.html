@@ -192,6 +192,17 @@
     .wl-btn:hover { background: #f0c040; color: #0f1117; }
     .wl-btn.added { background: #f0c040; color: #0f1117; border-color: #f0c040; }
 
+    /* ── Fund meta ── */
+    .fund-meta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .fund-meta-item { display: flex; flex-direction: column; gap: 0.1rem; }
+    .fund-meta-label { font-size: 0.7rem; color: #555; }
+    .fund-meta-value { font-size: 0.9rem; color: #d0d0d0; }
+
     /* OHLC tooltip */
     .ohlc-tooltip {
       position: absolute;
@@ -277,6 +288,26 @@
         <canvas id="chartRSI"></canvas>
       </div>
     </div>
+
+    <!-- Fundamentals section -->
+    <div class="chart-card" id="fundCard" style="display:none">
+      <div class="chart-header">
+        <span class="chart-title">基本面</span>
+        <div class="sub-indicators">
+          <button class="sub-ind-btn kd active" id="btnEPS"  onclick="toggleEPS()">每股盈餘(EPS)</button>
+          <button class="sub-ind-btn rsi" id="btnREV" onclick="toggleREV()">月營收</button>
+        </div>
+      </div>
+
+      <div class="fund-meta" id="fundMeta"></div>
+
+      <div class="chart-wrapper" id="epsChartWrap" style="display:block">
+        <canvas id="chartEPS"></canvas>
+      </div>
+      <div class="chart-wrapper" id="revChartWrap" style="display:none">
+        <canvas id="chartREV"></canvas>
+      </div>
+    </div>
   </div>
 
   <footer>本系統僅供參考，不構成投資建議</footer>
@@ -289,9 +320,14 @@
     let visibleMA  = new Set([20]);
     let showKD     = false;
     let showRSI    = false;
+    let showEPS    = true;
+    let showREV    = false;
     let chartMain  = null;
     let chartKD    = null;
     let chartRSI   = null;
+    let chartEPS   = null;
+    let chartREV   = null;
+    let fundData   = null;   // fundamentals data from API
     let currentSymbol = null;   // resolved symbol after API call
     const SYMBOL   = window.location.pathname.split("/stock/")[1];
 
@@ -306,6 +342,7 @@
       document.getElementById("pageTitle").textContent = SYMBOL;
       await loadQuote();
       await loadChart(activeRange);
+      await loadFundamentals();
     })();
 
     // ── Quote ──
@@ -599,6 +636,134 @@
       } catch (e) {
         alert("加入失敗：" + e.message);
       }
+    }
+
+    // ── Fundamentals ──
+    async function loadFundamentals() {
+      document.getElementById("fundCard").style.display = "block";
+      try {
+        const res = await fetch(`/api/fundamentals/${SYMBOL}`);
+        if (!res.ok) return;
+        fundData = await res.json();
+        renderFundMeta();
+        if (showEPS) renderEPSChart();
+      } catch (e) {
+        console.error("Fundamentals load failed", e);
+      }
+    }
+
+    function renderFundMeta() {
+      const el = document.getElementById("fundMeta");
+      if (!fundData) return;
+      const items = [];
+      if (fundData.book_value_per_share)
+        items.push({ label: "每股淨值", value: fundData.book_value_per_share.toFixed(1) });
+      if (fundData.roe)
+        items.push({ label: "ROE", value: fundData.roe.toFixed(1) + "%" });
+      if (fundData.debt_ratio)
+        items.push({ label: "負債比", value: fundData.debt_ratio.toFixed(1) + "%" });
+      const epsCount = fundData.eps_history ? fundData.eps_history.length : 0;
+      if (epsCount > 0)
+        items.push({ label: "EPS資料", value: `${epsCount}季` });
+
+      el.innerHTML = items.map(i =>
+        `<div class="fund-meta-item"><span class="fund-meta-label">${i.label}</span><span class="fund-meta-value">${i.value}</span></div>`
+      ).join("");
+    }
+
+    function renderEPSChart() {
+      if (!fundData || !fundData.eps_history || fundData.eps_history.length === 0) {
+        document.getElementById("epsChartWrap").innerHTML =
+          '<div style="padding:1rem;color:#555;font-size:0.85rem">⚠️ EPS資料暫時無法取得（TWSE/TPEx API未回應）。此功能需要付費資料源。</div>';
+        return;
+      }
+      const history = fundData.eps_history.slice(-8);
+      const labels  = history.map(h => h.quarter);
+      const values  = history.map(h => h.eps);
+
+      const ctx = document.getElementById("chartEPS").getContext("2d");
+      if (chartEPS) chartEPS.destroy();
+
+      chartEPS = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "EPS",
+            data: values,
+            backgroundColor: values.map(v => v >= 0 ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)"),
+            borderColor:     values.map(v => v >= 0 ? "#22c55e" : "#ef4444"),
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 3.0,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280" } },
+            y: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280" } },
+          },
+        },
+      });
+    }
+
+    function renderREVChart() {
+      if (!fundData || !fundData.revenue_history || fundData.revenue_history.length === 0) {
+        document.getElementById("revChartWrap").innerHTML =
+          '<div style="padding:1rem;color:#555;font-size:0.85rem">⚠️ 月營收資料需要 Moex Pro API，現為 MVP 階段展示功能。</div>';
+        return;
+      }
+      const history = fundData.revenue_history.slice(-12);
+      const labels   = history.map(h => h.month);
+      const values   = history.map(h => h.revenue / 1_000_000);  // 转为百万
+      const yoyVals  = history.map(h => h.yoy);
+
+      const ctx = document.getElementById("chartREV").getContext("2d");
+      if (chartREV) chartREV.destroy();
+
+      chartREV = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "月營收(百萬)",
+            data: values,
+            backgroundColor: "rgba(96,165,250,0.6)",
+            borderColor: "#60a5fa",
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 3.0,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280" } },
+            y: { grid: { color: "#1f2937" }, ticks: { color: "#6b7280" } },
+          },
+        },
+      });
+    }
+
+    function toggleEPS() {
+      showEPS = true; showREV = false;
+      document.getElementById("btnEPS").classList.add("active");
+      document.getElementById("btnREV").classList.remove("active");
+      document.getElementById("epsChartWrap").style.display = "block";
+      document.getElementById("revChartWrap").style.display = "none";
+      if (!chartEPS && fundData) renderEPSChart();
+    }
+
+    function toggleREV() {
+      showREV = true; showEPS = false;
+      document.getElementById("btnREV").classList.add("active");
+      document.getElementById("btnEPS").classList.remove("active");
+      document.getElementById("revChartWrap").style.display = "block";
+      document.getElementById("epsChartWrap").style.display = "none";
+      if (!chartREV && fundData) renderREVChart();
     }
 
     // Range buttons

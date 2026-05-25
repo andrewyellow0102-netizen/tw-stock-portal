@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.services import yahoo_finance as yf
 from app.services import stock_cache
+from app.services import fundamentals
 
 
 router = APIRouter(prefix="/api", tags=["stocks"])
@@ -127,3 +128,25 @@ async def search(q: str = Query(..., min_length=1, description="Stock code or na
             break
 
     return {"query": q, "results": results}
+
+
+@router.get("/fundamentals/{symbol}")
+async def get_fundamentals_endpoint(symbol: str):
+    """
+    Get fundamental data for a Taiwan stock: EPS history, revenue history.
+    Data sourced from TWSE/TPEx official APIs.
+    Returns partial data if external APIs are unreachable.
+    """
+    data = await fundamentals.get_fundamentals(symbol)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"查無「{symbol}」的基本面資料")
+
+    return {
+        "symbol":    data.symbol,
+        "board":     data.board,
+        "eps_history":    data.eps_history,
+        "revenue_history": data.revenue_history,
+        "book_value_per_share": data.book_value_per_share,
+        "roe":       data.roe,
+        "debt_ratio": data.debt_ratio,
+    }
