@@ -1,14 +1,22 @@
 """
-Fundamentals service — key financial ratios via yfinance.
+Fundamentals service — key financial ratios via yfinance + TWSE monthly revenue.
 
-yfinance handles Yahoo Finance cookie/crumb authentication automatically.
+Revenue: TWSE OpenAPI (free, no token required)
+  https://openapi.twse.com.tw/v1/opendata/t187ap05_L
+Other data: yfinance (handles cookie/crumb automatically)
 """
 
 from __future__ import annotations
 
+import httpx
 from typing import Optional
 
 import yfinance as yf
+
+
+TWSE_REVENUE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
+_REVENUE_CACHE: dict = {}
+_CACHE_TTL = 3600  # 1 hour
 
 
 def _resolve_symbol(symbol: str) -> str:
@@ -47,6 +55,57 @@ def _py(val):
         return f
     except (TypeError, ValueError):
         return None
+
+
+import time
+
+
+def _fetch_twse_revenue(symbol4: str) -> list[dict]:
+    """Fetch monthly revenue history for a TWSE/TPEx stock from TWSE OpenAPI.
+
+    Returns list of {month: str, revenue: float, mom_pct: float, yoy_pct: float}.
+    """
+    import math, time as _time
+
+    now = _time.time()
+    if symbol4 in _REVENUE_CACHE and (now - _REVENUE_CACHE[symbol4][0]) < _CACHE_TTL:
+        return _REVENUE_CACHE[symbol4][1]
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(TWSE_REVENUE_URL)
+            resp.raise_for_status()
+            all_data = resp.json()
+    except Exception:
+        return []
+
+    # Filter to this symbol
+    results = []
+    for row in all_data:
+        code = row.get("公司代號") or row.get("stk_code", "")
+        if code != symbol4:
+            continue
+        raw_rev = row.get("營業收入-當月營收") or row.get("當月營收", "0")
+        try:
+            revenue = float(str(raw_rev).replace(",", ""))
+        except Exception:
+            revenue = 0.0
+        if revenue == 0:
+            continue
+        month_str = str(row.get("資料年月", ""))
+        mom = _py(row.get("營業收入-上月比較增減(%)", 0))
+        yoy = _py(row.get("營業收入-去年同月增減(%)", 0))
+        results.append({
+            "month":     month_str,
+            "revenue":   revenue,
+            "mom_pct":   round(mom, 2) if mom is not None else None,
+            "yoy_pct":   round(yoy, 2) if yoy is not None else None,
+        })
+
+    # Cache only if we found data
+    if results:
+        _REVENUE_CACHE[symbol4] = (now, results)
+    return results
 
 
 async def get_fundamentals(symbol: str) -> Optional[dict]:
@@ -117,11 +176,16 @@ async def get_fundamentals(symbol: str) -> Optional[dict]:
     except Exception:
         pass
 
+    # TWSE monthly revenue
+    symbol4 = resolved.replace(".TW", "").replace(".TWO", "").replace(".TSE", "")
+    revenue_history = _fetch_twse_revenue(symbol4) if board != "US" else []
+
     return {
         "symbol":               resolved,
         "board":                board,
         "trailing_eps":         trailing_eps,
         "eps_history":          eps_history,
+        "revenue_history":      revenue_history,
         "book_value_per_share": book_value,
         "roe":                  round(roe * 100, 2) if roe else None,
         "debt_ratio":           debt_ratio,
