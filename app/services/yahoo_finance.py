@@ -1,37 +1,29 @@
 """
-Yahoo Finance API service.
+Yahoo Finance API service via yfinance.
 
-Symbol resolution:
-- 4-digit numeric → try .TW (TWSE/上市), then .TWO (TPEx/上櫃)
-- Already-suffixed → use as-is
-- US symbols → use as-is
+yfinance handles cookie/crumb authentication automatically,
+avoiding 401 Unauthorized errors from direct API calls.
 """
 
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Optional
 
-import httpx
+import yfinance as yf
+
+from app.services import stock_cache
 
 
-YAHOO_BASE = "https://query1.finance.yahoo.com/v8/finance/chart"
-HEADERS = {"User-Agent": "Mozilla/5.0"}
-TIMEOUT = 10.0  # seconds
-
-
-def to_yahoo_ticker(symbol: str) -> list[str]:
-    """Return list of Yahoo ticker suffixes to try for a given symbol."""
-    s = symbol.strip().upper()
-    # Already has suffix
-    if s.endswith(".TW") or s.endswith(".TWO"):
-        return [s]
-    # 4-digit Taiwan stock code
-    if s.isdigit() and len(s) == 4:
-        return [f"{s}.TW", f"{s}.TWO"]
-    # US / other — as-is
-    return [s]
+YAHOO_RANGE_MAP = {
+    "5d":  ("5d",   "5m"),
+    "1mo": ("1mo",  "30m"),
+    "3mo": ("3mo",  "daily"),
+    "6mo": ("6mo",  "daily"),
+    "1y":  ("1y",   "daily"),
+}
 
 
 def board_from_ticker(ticker: str) -> str:
@@ -41,255 +33,248 @@ def board_from_ticker(ticker: str) -> str:
     return "TWSE"
 
 
+def _resolve_yf(symbol: str) -> str:
+    """Resolve a 4-digit Taiwan code to full Yahoo ticker."""
+    s = symbol.strip().upper()
+    if s.endswith(".TW") or s.endswith(".TWO"):
+        return s
+    if s.isdigit() and len(s) == 4:
+        t = yf.Ticker(f"{s}.TW")
+        try:
+            if t.info and t.info.get("regularMarketPrice") is not None:
+                return f"{s}.TW"
+        except Exception:
+            pass
+        return f"{s}.TWO"
+    return s
+
+
 @dataclass
 class Quote:
-    symbol: str          # e.g. "2330.TW"
-    board: str           # "TWSE" or "TPEx"
-    name: str
-    price: float
-    change: float
-    change_pct: float
-    open: float
-    high: float
-    low: float
-    prev_close: float
-    volume: int
-    pe_ratio: Optional[float]
-    pb_ratio: Optional[float]
+    symbol:       str
+    board:        str
+    name:         str
+    price:        float
+    change:       float
+    change_pct:   float
+    open:         Optional[float]
+    high:         Optional[float]
+    low:          Optional[float]
+    prev_close:   Optional[float]
+    volume:       Optional[int]
+    pe_ratio:     Optional[float]
+    pb_ratio:     Optional[float]
 
 
-async def get_quote(symbol: str) -> Quote | None:
-    """
-    Fetch a real-time quote for the given symbol.
-    Tries .TW first, falls back to .TWO if 404.
-    Returns None if the symbol cannot be resolved.
-    """
-    tickers = to_yahoo_ticker(symbol)
-    last_error = None
-
-    async with httpx.AsyncClient(headers=HEADERS, timeout=TIMEOUT) as client:
-        for ticker in tickers:
-            try:
-                url = f"{YAHOO_BASE}/{ticker}?interval=1d&range=1d"
-                resp = await client.get(url)
-                if resp.status_code == 404:
-                    last_error = f"{ticker} not found"
-                    continue
-                resp.raise_for_status()
-                data = resp.json()
-            except httpx.HTTPError as e:
-                last_error = str(e)
-                continue
-
-            result = data["chart"]["result"]
-            if not result:
-                last_error = "empty result"
-                continue
-
-            meta = result[0]["meta"]
-            price = meta.get("regularMarketPrice")
-            if price is None:
-                last_error = "no price data"
-                continue
-
-            prev = meta.get("chartPreviousClose", price)
-            change = round(price - prev, 2)
-            change_pct = round(change / prev * 100, 2) if prev else 0.0
-
-            # Extract shortName or derive from symbol
-            name = meta.get("shortName") or meta.get("symbol", symbol)
-
-            # Financial ratios (may be null)
-            # Yahoo doesn't expose PE/PB in chart meta — leave None for now
-            # We'll populate from the quote endpoint if available
-            pe_ratio = None
-            pb_ratio = None
-
-            # Try to get PE from the quote endpoint
-            quote_url = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={ticker}"
-            try:
-                r2 = await client.get(quote_url)
-                if r2.status_code == 200:
-                    qdata = r2.json()
-                    qt = qdata.get("quoteResponse", {}).get("result", [{}])
-                    if qt:
-                        pe_ratio = qt[0].get("trailingPE")
-                        pb_ratio = qt[0].get("priceToBook")
-            except Exception:
-                pass  # PE/PB are best-effort
-
-            return Quote(
-                symbol=ticker,
-                board=board_from_ticker(ticker),
-                name=name,
-                price=price,
-                change=change,
-                change_pct=change_pct,
-                open=meta.get("regularMarketOpen", price),
-                high=meta.get("regularMarketDayHigh", price),
-                low=meta.get("regularMarketDayLow", price),
-                prev_close=prev,
-                volume=meta.get("regularMarketVolume", 0),
-                pe_ratio=pe_ratio,
-                pb_ratio=pb_ratio,
-            )
-
-    # All tickers failed
-    return None
+@dataclass
+class ChartData:
+    symbol:    str
+    board:     str
+    timestamps: list[int]       # Unix seconds
+    opens:     list[float]
+    highs:     list[float]
+    lows:      list[float]
+    closes:    list[float]
+    volumes:   list[int]
+    ma5:       list[Optional[float]]
+    ma20:      list[Optional[float]]
+    ma60:      list[Optional[float]]
+    kd_k:      list[Optional[float]]
+    kd_d:      list[Optional[float]]
+    rsi_6:     list[Optional[float]]
+    rsi_12:    list[Optional[float]]
 
 
-async def get_ohlc(
-    symbol: str,
-    interval: str = "1d",
-    range_: str = "3mo",
-) -> Optional[dict]:
-    """
-    Fetch OHLC candle data with technical indicators.
-    Returns dict with candles, ma5, ma20, ma60, kd_k, kd_d, rsi_6, rsi_12.
-    """
-    tickers = to_yahoo_ticker(symbol)
+# ── KD calculation ───────────────────────────────────────────────────────
 
-    async with httpx.AsyncClient(headers=HEADERS, timeout=TIMEOUT) as client:
-        for ticker in tickers:
-            try:
-                url = f"{YAHOO_BASE}/{ticker}?interval={interval}&range={range_}"
-                resp = await client.get(url)
-                if resp.status_code == 404:
-                    continue
-                resp.raise_for_status()
-                data = resp.json()
-            except httpx.HTTPError:
-                continue
-
-            result = data.get("chart", {}).get("result")
-            if not result:
-                continue
-
-            r = result[0]
-            timestamps = r.get("timestamp", [])
-            quote = r.get("indicators", {}).get("quote", [{}])[0]
-
-            opens  = quote.get("open", [])
-            highs  = quote.get("high", [])
-            lows   = quote.get("low", [])
-            closes = quote.get("close", [])
-            vols   = quote.get("volume", [])
-
-            if not closes:
-                continue
-
-            candles = []
-            for i, ts in enumerate(timestamps):
-                candles.append({
-                    "date":  ts,
-                    "open":   opens[i]  if i < len(opens)  and opens[i]  is not None else None,
-                    "high":   highs[i]  if i < len(highs)  and highs[i]  is not None else None,
-                    "low":    lows[i]   if i < len(lows)   and lows[i]   is not None else None,
-                    "close":  closes[i] if i < len(closes) and closes[i] is not None else None,
-                    "volume": vols[i]   if i < len(vols)   and vols[i]   is not None else 0,
-                })
-
-            # Compute technical indicators
-            closes_clean = [c for c in closes if c is not None]
-            ma5   = _ma(closes, 5)
-            ma20  = _ma(closes, 20)
-            ma60  = _ma(closes, 60)
-            kd_k, kd_d = _kd(closes)
-            rsi6  = _rsi(closes, 6)
-            rsi12 = _rsi(closes, 12)
-
-            return {
-                "symbol":  ticker,
-                "board":   board_from_ticker(ticker),
-                "candles": candles,
-                "ma5":     ma5,
-                "ma20":    ma20,
-                "ma60":    ma60,
-                "kd_k":    kd_k,
-                "kd_d":    kd_d,
-                "rsi_6":   rsi6,
-                "rsi_12":  rsi12,
-            }
-
-    return None
-
-
-# ── Technical indicator helpers ────────────────────────────────────────────
-
-def _ma(closes: list, n: int) -> list:
-    """Simple moving average, same length as closes, padding front with null."""
-    result = [None] * len(closes)
-    if len(closes) < n:
-        return result
-    for i in range(n - 1, len(closes)):
-        vals = closes[i - n + 1 : i + 1]
-        if None not in vals:
-            result[i] = round(sum(vals) / n, 2)
-    return result
-
-
-def _kd(closes: list, n: int = 9) -> tuple[list, list]:
-    """K and D values. Returns two same-length lists, front padded with null."""
-    k = [None] * len(closes)
-    d = [None] * len(closes)
-    if len(closes) < n:
-        return k, d
-
-    # RSV for each day
-    rsv = [None] * len(closes)
-    for i in range(n - 1, len(closes)):
-        window = closes[i - n + 1 : i + 1]
-        if None in window:
-            continue
-        low_min  = min(window)
-        high_max = max(window)
-        if high_max == low_min:
-            rsv[i] = 50.0
-        else:
-            rsv[i] = (closes[i] - low_min) / (high_max - low_min) * 100
-
-    # K = 2/3 prev K + 1/3 RSV, D = 2/3 prev D + 1/3 K
+def _calc_kd(closes: list[float], period: int = 9) -> tuple[list[Optional[float]], list[Optional[float]]]:
+    k_list, d_list = [], []
     k_val, d_val = 50.0, 50.0
-    for i in range(n - 1, len(closes)):
-        if rsv[i] is None:
+    for i in range(len(closes)):
+        if i < period - 1:
+            k_list.append(None)
+            d_list.append(None)
             continue
-        k_val = 2 / 3 * k_val + 1 / 3 * rsv[i]
-        d_val = 2 / 3 * d_val + 1 / 3 * k_val
-        k[i] = round(k_val, 2)
-        d[i] = round(d_val, 2)
+        lowest_low  = min(closes[i - period + 1 : i + 1])
+        highest_high = max(closes[i - period + 1 : i + 1])
+        rsv = (closes[i] - lowest_low) / (highest_high - lowest_low) * 100 if highest_high != lowest_low else 50
+        k_val = k_val * 2/3 + rsv * 1/3
+        d_val = d_val * 2/3 + k_val * 1/3
+        k_list.append(round(k_val, 2))
+        d_list.append(round(d_val, 2))
+    return k_list, d_list
 
-    return k, d
 
-
-def _rsi(closes: list, n: int = 14) -> list:
-    """RSI with period n. Returns same-length list, front padded with null."""
-    result = [None] * len(closes)
-    if len(closes) < n + 1:
-        return result
-
+def _calc_rsi(closes: list[float], period: int) -> list[Optional[float]]:
+    if len(closes) < period + 1:
+        return [None] * len(closes)
     gains, losses = [], []
     for i in range(1, len(closes)):
-        c = closes[i]
-        p = closes[i - 1]
-        if c is None or p is None:
-            gains.append(None)
-            losses.append(None)
-            continue
-        diff = c - p
+        diff = closes[i] - closes[i - 1]
         gains.append(max(diff, 0))
         losses.append(max(-diff, 0))
+    if not gains:
+        return [None] * len(closes)
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    rsi = [None] * (period + 1)
+    for i in range(period, len(closes)):
+        avg_gain = (avg_gain * (period - 1) + gains[i - 1]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i - 1]) / period
+        rs = avg_gain / avg_loss if avg_loss != 0 else 0
+        rsi.append(round(100 - 100 / (1 + rs), 2))
+    return rsi
 
-    for i in range(n, len(closes)):
-        window_g = gains[i - n : i]
-        window_l = losses[i - n : i]
-        if None in window_g or None in window_l:
-            continue
-        avg_g = sum(window_g) / n
-        avg_l = sum(window_l) / n
-        if avg_l == 0:
-            result[i] = 100.0
+
+def _calc_ma(values: list[float], period: int) -> list[Optional[float]]:
+    result = []
+    for i in range(len(values)):
+        if i < period - 1:
+            result.append(None)
         else:
-            rs = avg_g / avg_l
-            result[i] = round(100 - 100 / (1 + rs), 2)
-
+            result.append(round(sum(values[i - period + 1 : i + 1]) / period, 2))
     return result
+
+
+# ── Public API ────────────────────────────────────────────────────────────
+
+@stock_cache.cached(ttl_seconds=60)
+async def get_quote(symbol: str) -> Optional[Quote]:
+    """Fetch a single quote. Returns None if not found."""
+    resolved = _resolve_yf(symbol)
+    ticker = yf.Ticker(resolved)
+
+    try:
+        info = ticker.info
+        if not info or info.get("regularMarketPrice") is None:
+            return None
+    except Exception:
+        return None
+
+    price      = info.get("regularMarketPrice") or 0
+    prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose") or price
+    change     = price - prev_close
+    change_pct = (change / prev_close * 100) if prev_close else 0
+
+    return Quote(
+        symbol     = resolved,
+        board      = board_from_ticker(resolved),
+        name       = info.get("shortName") or info.get("longName") or resolved,
+        price      = float(price),
+        change     = round(float(change), 2),
+        change_pct = round(float(change_pct), 2),
+        open       = _to_float(info.get("regularMarketOpen")),
+        high       = _to_float(info.get("regularMarketDayHigh")),
+        low        = _to_float(info.get("regularMarketDayLow")),
+        prev_close = _to_float(prev_close),
+        volume     = _to_int(info.get("regularMarketVolume")),
+        pe_ratio   = _to_float(info.get("trailingPE")),
+        pb_ratio   = _to_float(info.get("priceToBook")),
+    )
+
+
+@stock_cache.cached(ttl_seconds=1800)
+async def get_chart(symbol: str, range_key: str = "3mo") -> Optional[ChartData]:
+    """
+    Fetch OHLCV + indicators (MA5/20/60, KD, RSI6/12) for a symbol.
+    Uses yfinance history() which handles crumb auth automatically.
+    """
+    resolved = _resolve_yf(symbol)
+    yf_range, yf_interval = YAHOO_RANGE_MAP.get(range_key, ("3mo", "daily"))
+
+    ticker = yf.Ticker(resolved)
+    try:
+        hist = ticker.history(range=yf_range, interval=yf_interval)
+        if hist is None or hist.empty:
+            return None
+    except Exception:
+        return None
+
+    closes   = [float(c) for c in hist["Close"]]
+    opens    = [float(o) for o in hist["Open"]]
+    highs    = [float(h) for h in hist["High"]]
+    lows     = [float(l) for l in hist["Low"]]
+    volumes  = [int(v)   for v in hist["Volume"]]
+    # Convert timestamps to Unix seconds (UTC)
+    timestamps = [int(ts.timestamp()) for ts in hist.index]
+
+    return ChartData(
+        symbol    = resolved,
+        board     = board_from_ticker(resolved),
+        timestamps = timestamps,
+        opens     = opens,
+        highs     = highs,
+        lows      = lows,
+        closes    = closes,
+        volumes   = volumes,
+        ma5       = _calc_ma(closes, 5),
+        ma20      = _calc_ma(closes, 20),
+        ma60      = _calc_ma(closes, 60) if len(closes) >= 60 else [None] * len(closes),
+        kd_k      = _calc_kd(closes)[0],
+        kd_d      = _calc_kd(closes)[1],
+        rsi_6     = _calc_rsi(closes, 6),
+        rsi_12    = _calc_rsi(closes, 12),
+    )
+
+
+def search_stocks(q: str) -> list[dict]:
+    """
+    Basic prefix search against a known stock list.
+    For production: query Yahoo Finance /api/v1/finance/search
+    """
+    KNOWN_STOCKS = {
+        "2330": "台積電 (2330)",
+        "2317": "鴻海 (2317)",
+        "2454": "聯發科 (2454)",
+        "3008": "大立光 (3008)",
+        "2412": "中華電 (2412)",
+        "2881": "富邦金 (2881)",
+        "2882": "國泰金 (2882)",
+        "2891": "中信金 (2891)",
+        "2892": "第一金 (2892)",
+        "2002": "中鋼 (2002)",
+        "1215": "卜蜂 (1215)",
+        "1303": "南亞 (1303)",
+        "1326": "台化 (1326)",
+        "1718": "中纖 (1718)",
+        "2618": "長榮航 (2618)",
+        "2610": "華航 (2610)",
+        "3034": "聯詠 (3034)",
+        "3035": "智原 (3035)",
+        "3443": "創意 (3443)",
+        "6515": "慧穎 (6515)",
+        "6552": "展達 (6552)",
+        "8107": "大富 (8107)",
+        "8131": "上銀 (8131)",
+        "3081": "聯亞 (3081)",
+    }
+
+    q = q.strip().upper()
+    results = []
+    for code, name in KNOWN_STOCKS.items():
+        if code.startswith(q):
+            results.append({"code": code, "name": name})
+        if len(results) >= 10:
+            break
+
+    return results
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+def _to_float(val) -> Optional[float]:
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_int(val) -> Optional[int]:
+    if val is None:
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None
