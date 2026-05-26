@@ -417,9 +417,9 @@
       }
     }
 
-    function makeLabels(candles) {
-      return candles.map(c =>
-        new Date(c.date * 1000).toLocaleDateString("zh-TW", {month: "numeric", day: "numeric"})
+    function makeLabels(timestamps) {
+      return timestamps.map(ts =>
+        new Date(ts * 1000).toLocaleDateString("zh-TW", {month: "numeric", day: "numeric"})
       );
     }
 
@@ -431,9 +431,8 @@
 
     // ── Main price + MA chart ──
     function renderMainChart() {
-      const { candles, ma5, ma20, ma60 } = chartData;
-      const closes = candles.map(c => c.close);
-      const labels = makeLabels(candles);
+      const { timestamps, closes, ma5, ma20, ma60 } = chartData;
+      const labels = makeLabels(timestamps);
 
       const ctx = document.getElementById("chartMain").getContext("2d");
       if (chartMain) chartMain.destroy();
@@ -482,8 +481,8 @@
 
     // ── KD subchart ──
     function renderKDChart() {
-      const { candles, kd_k, kd_d } = chartData;
-      const labels = makeLabels(candles);
+      const { timestamps, kd_k, kd_d } = chartData;
+      const labels = makeLabels(timestamps);
       const ctx    = document.getElementById("chartKD").getContext("2d");
       if (chartKD) chartKD.destroy();
 
@@ -531,8 +530,8 @@
 
     // ── RSI subchart ──
     function renderRSIChart() {
-      const { candles, rsi_6, rsi_12 } = chartData;
-      const labels = makeLabels(candles);
+      const { timestamps, rsi_6, rsi_12 } = chartData;
+      const labels = makeLabels(timestamps);
       const ctx    = document.getElementById("chartRSI").getContext("2d");
       if (chartRSI) chartRSI.destroy();
 
