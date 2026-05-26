@@ -67,7 +67,7 @@ async def get_chart(
     if cached is not None:
         return cached
 
-    data = await yf.get_ohlc(symbol, interval=interval, range_=range_)
+    data = await yf.get_chart(symbol, range_key=range_)
     if data is None:
         raise HTTPException(
             status_code=404,

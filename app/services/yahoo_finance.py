@@ -18,9 +18,9 @@ import yfinance as yf
 YAHOO_RANGE_MAP = {
     "5d":  ("5d",   "5m"),
     "1mo": ("1mo",  "30m"),
-    "3mo": ("3mo",  "daily"),
-    "6mo": ("6mo",  "daily"),
-    "1y":  ("1y",   "daily"),
+    "3mo": ("3mo",  "1d"),
+    "6mo": ("6mo",  "1d"),
+    "1y":  ("1y",   "1d"),
 }
 
 
@@ -180,7 +180,7 @@ async def get_chart(symbol: str, range_key: str = "3mo") -> Optional[ChartData]:
 
     ticker = yf.Ticker(resolved)
     try:
-        hist = ticker.history(range=yf_range, interval=yf_interval)
+        hist = ticker.history(period=yf_range, interval=yf_interval)
         if hist is None or hist.empty:
             return None
     except Exception:
