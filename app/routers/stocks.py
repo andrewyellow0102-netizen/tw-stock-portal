@@ -140,13 +140,4 @@ async def get_fundamentals_endpoint(symbol: str):
     data = await fundamentals.get_fundamentals(symbol)
     if data is None:
         raise HTTPException(status_code=404, detail=f"查無「{symbol}」的基本面資料")
-
-    return {
-        "symbol":    data.symbol,
-        "board":     data.board,
-        "eps_history":    data.eps_history,
-        "revenue_history": data.revenue_history,
-        "book_value_per_share": data.book_value_per_share,
-        "roe":       data.roe,
-        "debt_ratio": data.debt_ratio,
-    }
+    return data

@@ -14,8 +14,6 @@ from typing import Optional
 
 import yfinance as yf
 
-from app.services import stock_cache
-
 
 YAHOO_RANGE_MAP = {
     "5d":  ("5d",   "5m"),
@@ -138,7 +136,6 @@ def _calc_ma(values: list[float], period: int) -> list[Optional[float]]:
 
 # ── Public API ────────────────────────────────────────────────────────────
 
-@stock_cache.cached(ttl_seconds=60)
 async def get_quote(symbol: str) -> Optional[Quote]:
     """Fetch a single quote. Returns None if not found."""
     resolved = _resolve_yf(symbol)
@@ -173,7 +170,6 @@ async def get_quote(symbol: str) -> Optional[Quote]:
     )
 
 
-@stock_cache.cached(ttl_seconds=1800)
 async def get_chart(symbol: str, range_key: str = "3mo") -> Optional[ChartData]:
     """
     Fetch OHLCV + indicators (MA5/20/60, KD, RSI6/12) for a symbol.

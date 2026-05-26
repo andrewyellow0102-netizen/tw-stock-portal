@@ -6,7 +6,7 @@ Avoids hammering the API with repeated requests.
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 from cachetools import TTLCache
 
 
